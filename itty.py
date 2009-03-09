@@ -118,11 +118,6 @@ class Redirect(RequestError):
         self.url = url
 
 
-class Media(object):
-    path = '/media'
-    root = os.path.join(os.path.dirname(__file__), 'media')
-
-
 class Request(object):
     """An object to wrap the environ bits in a friendlier way."""
     GET = {}
@@ -185,19 +180,12 @@ class Request(object):
                 query_dict[field] = raw_data[field].value
         
         return query_dict
-    
-    def is_static(self):
-        return self.path.rstrip('/').startswith(Media.path)
 
 
 def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
     try:
         request = Request(environ)
-        
-        if request.is_static():
-            return static_file(request, start_response)
-        
         (re_url, url, callback), kwargs = find_matching_url(request)
         output = callback(request, **kwargs)
     except Exception, e:
@@ -247,30 +235,28 @@ def add_slash(url):
     return url
 
 
-def check_url(url):
-    """
-    Ensures a URL can be registered.
-    
-    For now, this only ensures that it does not have the same path as the
-    MEDIA_ROOT.
-    """
-    if url.startswith(Media.path):
-        raise RuntimeError("Url '%s' can not have the same path as the Media.path." % url)
-
-
 # Static file handler
+def serve_media(path='/media', root=os.path.join(os.path.dirname(__file__), 'media')):
+    """Registers a media url and path."""
+    url = "/%s/.+" % path.strip('/')
+    def new(*args, **kwargs):
+        return static_file(path=path, root=root, handler=new, *args)
+    # Register.
+    re_url = re.compile("^%s$" % url)
+    REQUEST_MAPPINGS['GET'].append((re_url, url, new))
+    return new
 
-def static_file(request, start_response, media=Media):
+def static_file(request, path, root, handler):    
     # Strip the Media.path from beginning.
-    valid_path = request.path.replace(media.path, '', 1)
+    valid_path = request.path.replace(path, '', 1)
     
     # Strip the '/' from the beginning/end.
     valid_path = valid_path.strip('/')
     
     # Kill off any character trying to work their way up the filesystem.
     valid_path = valid_path.replace('//', '/').replace('/./', '/').replace('/../', '/')
-    
-    desired_path = os.path.join(media.root, valid_path)
+
+    desired_path = os.path.join(root, valid_path)
     
     if not os.path.exists(desired_path):
         raise NotFound("File does not exist.")
@@ -284,8 +270,8 @@ def static_file(request, start_response, media=Media):
     if ct_guess[0] is not None:
         ct = ct_guess[0]
     
+    handler.content_type = ct
     file_contents = open(desired_path, 'r').read()
-    start_response(HTTP_MAPPINGS[200], [('Content-Type', ct)])
     return [file_contents]
 
 
@@ -297,7 +283,6 @@ def get(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['GET'].append((re_url, url, new))
         return new
@@ -310,7 +295,6 @@ def post(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['POST'].append((re_url, url, new))
         return new
@@ -323,7 +307,6 @@ def put(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['PUT'].append((re_url, url, new))
         new.status = 201
@@ -337,7 +320,6 @@ def delete(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['DELETE'].append((re_url, url, new))
         return new
