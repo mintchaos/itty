@@ -10,11 +10,11 @@ def index(request):
 
 serve_media(path="/media", root=os.path.join(os.path.dirname(__file__), 'media'))
 
-# Or simply setup a standard @get method. You should
-# capture the filename/path and get the content-type. If your media root is
-# different than where your ``itty.py`` lives, manually setup your root
-# directory as well. Finally, use the ``static_file`` handler to serve up the
-# file. (the serve_media shortcut does exactly this)
+# Or simply setup a standard @get method. You should capture the filename/path
+# and get the content-type. If your media root is different than where your
+# ``itty.py`` lives, manually setup your root directory as well. Finally, use
+# the ``static_file`` handler to serve up the file. (the serve_media shortcut
+# does exactly this)
 
 # @get('/media/(?P<filename>.+)')
 # def my_media(request, filename):
