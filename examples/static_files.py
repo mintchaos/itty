@@ -15,6 +15,6 @@ from itty import *
 
 @get('/')
 def index(request):
-    return 'Hello World!'
+    return 'An image: <img style="vertical-align:middle" src="/media/itty.png">'
 
 run_itty()
