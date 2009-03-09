@@ -256,6 +256,12 @@ def content_type(filename):
 
 
 # Static file handler
+def serve_media(path="/media/", root=os.path.join(os.path.dirname(__file__), 'media')):
+    @get('/%s/(?P<filename>.+)' % path.strip('/'))
+    def my_media(request, filename):
+        my_media.content_type = content_type(filename)
+        my_root = root
+        return static_file(request, filename=filename, root=my_root)
 
 def static_file(request, filename, root=MEDIA_ROOT):
     """
